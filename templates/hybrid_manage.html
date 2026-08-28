@@ -1,0 +1,31 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="row"><div class="medium-12 columns">
+  <div class="section">
+    <div class="section__header"><h1 class="section__title">{{ tdoc.title }} · 混合赛制配置</h1></div>
+    <div class="section__body typo">
+      <p>请在比赛开始前填写配置。每名参赛选手必须恰好属于一支队伍，并有一道个人题；每支队伍必须配置 <strong>5 个互不重复的团队题副本</strong>。所有题目请在 Hydro 中设为隐藏，避免通过普通题库入口泄题。</p>
+      <p>团队题副本必须使用相同题面与相同基础数据。插件会在某队成功 Hack 后，只向被 Hack 队伍对应的副本添加数据并重测该队提交，从而保证队伍之间互不污染。</p>
+      <form method="post" action="{{ url('hybrid_manage', tid=tdoc.docId) }}">
+        <label>JSON 配置</label>
+        <textarea name="config" rows="28" style="font-family: monospace; width: 100%;">{{ configJson }}</textarea>
+        <p><button class="button primary" type="submit" onclick="return confirm('保存后会把比赛固定为 3 小时并重写题目列表。比赛开始后不能再修改。确认保存？')">验证并保存</button>
+        <a class="button" href="{{ url('hybrid_dashboard', tid=tdoc.docId) }}">返回选手控制台</a></p>
+      </form>
+      <h2>配置示例</h2>
+      <pre>{
+  "personal": {
+    "101": 1001,
+    "102": 1002,
+    "201": 1003,
+    "202": 1004
+  },
+  "teams": [
+    { "id": "A", "name": "Team A", "members": [101, 102], "pids": [2001, 2002, 2003, 2004, 2005] },
+    { "id": "B", "name": "Team B", "members": [201, 202], "pids": [2011, 2012, 2013, 2014, 2015] }
+  ]
+}</pre>
+    </div>
+  </div>
+</div></div>
+{% endblock %}
