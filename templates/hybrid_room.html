@@ -1,0 +1,25 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="row"><div class="medium-12 columns">
+  <div class="section">
+    <div class="section__header"><h1 class="section__title">{{ tdoc.title }} · {{ team.name }} 讨论区</h1></div>
+    <div class="section__body typo"><p>仅本队且已锁定个人题的成员可以进入本页。请勿在此泄露其它队伍的代码或测试数据。</p></div>
+  </div>
+  <div class="section">
+    <div class="section__body">
+      {% if messages.length %}
+        {% for message in messages %}
+        <div class="section__body" style="border-bottom: 1px solid #ddd;"><strong>{{ message.uname }}</strong> <small>{{ datetimeSpan(message.createdAt)|safe }}</small><br>{{ message.content }}</div>
+        {% endfor %}
+      {% else %}
+        <p>暂无消息。</p>
+      {% endif %}
+      <form method="post" action="{{ url('hybrid_room', tid=tdoc.docId) }}">
+        <label>发送消息（最多 2000 字符）</label>
+        <textarea name="content" rows="4" required></textarea>
+        <p><button class="button primary" type="submit">发送</button><a class="button" href="{{ url('hybrid_dashboard', tid=tdoc.docId) }}">返回控制台</a></p>
+      </form>
+    </div>
+  </div>
+</div></div>
+{% endblock %}
