@@ -1,0 +1,68 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="row"><div class="medium-12 columns">
+  <div class="section">
+    <div class="section__header"><h1 class="section__title">{{ tdoc.title }} · 混合锁题赛制</h1></div>
+    <div class="section__body typo">
+      <p>赛程固定为 <strong>3 小时</strong>。每位选手先独立完成个人题；锁定后不可再提交个人题，并可查看本队 5 道团队题、进入队内讨论与使用 Hack 功能。</p>
+      {% if team %}
+      <p><strong>队伍：</strong>{{ team.name }}。当前锁题状态：{% for uid, state in lockedUsers %}UID {{ uid }}{% if state %} 已锁定{% else %} 未锁定{% endif %}{% if not loop.last %}；{% endif %}{% endfor %}。</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section__header"><h2 class="section__title">题目与操作</h2></div>
+    <div class="section__body">
+      <table class="data-table">
+        <thead><tr><th>类型</th><th>操作</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>个人题</td>
+            <td><a href="{{ url('problem_detail', pid=personalPid, query={tid:tdoc.docId}) }}">打开个人题</a></td>
+            <td>{% if locked %}已锁定，个人题不再允许提交。{% else %}完成后请确认锁定；锁定不可撤销。{% endif %}</td>
+          </tr>
+          {% if not locked %}
+          <tr>
+            <td>锁定个人题</td>
+            <td><form method="post" action="{{ url('hybrid_lock', tid=tdoc.docId) }}"><button class="button primary" type="submit" onclick="return confirm('锁定后无法再提交个人题，且该操作不可撤销。确认锁定？')">确认锁定</button></form></td>
+            <td>锁定后开放团队题与队内讨论。</td>
+          </tr>
+          {% else %}
+          <tr>
+            <td>团队讨论</td>
+            <td><a class="button" href="{{ url('hybrid_room', tid=tdoc.docId) }}">进入本队讨论区</a></td>
+            <td>仅已锁定的本队成员可读写。</td>
+          </tr>
+          {% for pid in team.pids %}
+          <tr>
+            <td>团队题 {{ loop.index }}</td>
+            <td>
+              <a href="{{ url('problem_detail', pid=pid, query={tid:tdoc.docId}) }}">打开题目</a>
+              · <a href="{{ url('hybrid_hack_list', tid=tdoc.docId, slot=loop.index0) }}">Hack 对手</a>
+            </td>
+            <td>本队隔离副本；每题 100 分。</td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+        </tbody>
+      </table>
+      {% if isAdmin %}<p><a href="{{ url('hybrid_manage', tid=tdoc.docId) }}">管理员配置</a></p>{% endif %}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section__header"><h2 class="section__title">团队排行榜</h2></div>
+    <div class="section__body">
+      <table class="data-table">
+        <thead><tr><th>#</th><th>队伍</th><th>个人题总分</th><th>团队题总分</th><th>总分</th></tr></thead>
+        <tbody>
+          {% for score in teamScores %}
+          <tr><td>{{ loop.index }}</td><td>{{ score.name }}</td><td>{{ score.personalTotal }}</td><td>{{ score.teamTotal }}</td><td><strong>{{ score.total }}</strong></td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div></div>
+{% endblock %}
