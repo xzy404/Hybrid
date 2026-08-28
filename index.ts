@@ -122,6 +122,12 @@ function equalId(a: any, b: any) {
   return a?.toString?.() === b?.toString?.();
 }
 
+function objectId(raw: any) {
+  if (raw instanceof ObjectId) return raw;
+  if (!raw || !ObjectId.isValid(String(raw))) throw new ValidationError('ObjectId');
+  return new ObjectId(String(raw));
+}
+
 function validateConfig(config: HybridConfig) {
   if (!config || typeof config !== 'object' || !config.personal || !Array.isArray(config.teams)) {
     throw new ValidationError('hybridLockHack');
@@ -465,7 +471,7 @@ function patchCoreHandlers(ctx: Context) {
     const rawArgs = args && typeof args === 'object' ? args : this.args;
     const domainId = this.args.domainId;
     const pid = this.args.pid;
-    const tid = this.args.tid;
+    const tid = this.args.tid ? objectId(this.args.tid) : undefined;
     if (tid) {
       const tdoc = await ContestModel.get(domainId, tid);
       if (isHybrid(tdoc) && !isContestAdmin(this, tdoc)) {
@@ -485,7 +491,7 @@ function patchCoreHandlers(ctx: Context) {
   problems.ProblemSubmitHandler.prototype.prepare = async function (args: any) {
     const rawArgs = args && typeof args === 'object' ? args : this.args;
     const domainId = this.args.domainId;
-    const tid = this.args.tid;
+    const tid = this.args.tid ? objectId(this.args.tid) : undefined;
     if (tid && isHybrid(this.tdoc)) await assertCanSubmit(domainId, tid, this.user._id, this.pdoc.docId);
     return await submitPrepare.call(this, rawArgs);
   };
@@ -494,8 +500,8 @@ function patchCoreHandlers(ctx: Context) {
   problems.ProblemHackHandler.prototype.prepare = async function (args: any) {
     const rawArgs = args && typeof args === 'object' ? args : this.args;
     const domainId = this.args.domainId;
-    const rid = this.args.rid;
-    const tid = this.args.tid;
+    const rid = objectId(this.args.rid);
+    const tid = this.args.tid ? objectId(this.args.tid) : undefined;
     if (!tid || !isHybrid(this.tdoc)) return await hackPrepare.call(this, rawArgs);
     if ((this.request.query || {}).hybridHack !== '1') throw new HackFailedError('Use the hybrid contest hack panel.');
     const check = await assertCanHack(this, domainId, tid, rid);
@@ -509,7 +515,7 @@ function patchCoreHandlers(ctx: Context) {
     const domainId = this.args.domainId;
     const input = rawArgs.input || '';
     const autoOrganizeInput = !!rawArgs.autoOrganizeInput;
-    const tid = this.args.tid;
+    const tid = this.args.tid ? objectId(this.args.tid) : undefined;
     if (!tid || !isHybrid(this.tdoc)) return await hackPost.call(this, rawArgs);
     const check = await assertCanHack(this, domainId, tid, this.rdoc._id);
     let hackInput = input.trim();
