@@ -461,7 +461,11 @@ function patchCoreHandlers(ctx: Context) {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const problems = require('hydrooj/src/handler/problem');
   const detailPrepare = problems.ProblemDetailHandler.prototype._prepare;
-  problems.ProblemDetailHandler.prototype._prepare = async function (domainId: string, pid: number, tid?: ObjectId) {
+  problems.ProblemDetailHandler.prototype._prepare = async function (args: any) {
+    const rawArgs = args && typeof args === 'object' ? args : this.args;
+    const domainId = this.args.domainId;
+    const pid = this.args.pid;
+    const tid = this.args.tid;
     if (tid) {
       const tdoc = await ContestModel.get(domainId, tid);
       if (isHybrid(tdoc) && !isContestAdmin(this, tdoc)) {
@@ -474,18 +478,25 @@ function patchCoreHandlers(ctx: Context) {
         }
       }
     }
-    return await detailPrepare.call(this, domainId, pid, tid);
+    return await detailPrepare.call(this, rawArgs);
   };
 
   const submitPrepare = problems.ProblemSubmitHandler.prototype.prepare;
-  problems.ProblemSubmitHandler.prototype.prepare = async function (domainId: string, tid?: ObjectId) {
+  problems.ProblemSubmitHandler.prototype.prepare = async function (args: any) {
+    const rawArgs = args && typeof args === 'object' ? args : this.args;
+    const domainId = this.args.domainId;
+    const tid = this.args.tid;
     if (tid && isHybrid(this.tdoc)) await assertCanSubmit(domainId, tid, this.user._id, this.pdoc.docId);
-    return await submitPrepare.call(this, domainId, tid);
+    return await submitPrepare.call(this, rawArgs);
   };
 
   const hackPrepare = problems.ProblemHackHandler.prototype.prepare;
-  problems.ProblemHackHandler.prototype.prepare = async function (domainId: string, rid: ObjectId, tid?: ObjectId) {
-    if (!tid || !isHybrid(this.tdoc)) return await hackPrepare.call(this, domainId, rid, tid);
+  problems.ProblemHackHandler.prototype.prepare = async function (args: any) {
+    const rawArgs = args && typeof args === 'object' ? args : this.args;
+    const domainId = this.args.domainId;
+    const rid = this.args.rid;
+    const tid = this.args.tid;
+    if (!tid || !isHybrid(this.tdoc)) return await hackPrepare.call(this, rawArgs);
     if ((this.request.query || {}).hybridHack !== '1') throw new HackFailedError('Use the hybrid contest hack panel.');
     const check = await assertCanHack(this, domainId, tid, rid);
     this.hybridHackCheck = check;
@@ -493,15 +504,20 @@ function patchCoreHandlers(ctx: Context) {
   };
 
   const hackPost = problems.ProblemHackHandler.prototype.post;
-  problems.ProblemHackHandler.prototype.post = async function (domainId: string, input = '', autoOrganizeInput = false, tid?: ObjectId) {
-    if (!tid || !isHybrid(this.tdoc)) return await hackPost.call(this, domainId, input, autoOrganizeInput, tid);
+  problems.ProblemHackHandler.prototype.post = async function (args: any) {
+    const rawArgs = args && typeof args === 'object' ? args : this.args;
+    const domainId = this.args.domainId;
+    const input = rawArgs.input || '';
+    const autoOrganizeInput = !!rawArgs.autoOrganizeInput;
+    const tid = this.args.tid;
+    if (!tid || !isHybrid(this.tdoc)) return await hackPost.call(this, rawArgs);
     const check = await assertCanHack(this, domainId, tid, this.rdoc._id);
-    input = (input || '').trim();
-    if (!input) throw new ValidationError('input');
-    if (autoOrganizeInput) input = input.replace(/\s+\n/g, '\n').replace(/\s+ /g, ' ');
+    let hackInput = input.trim();
+    if (!hackInput) throw new ValidationError('input');
+    if (autoOrganizeInput) hackInput = hackInput.replace(/\s+\n/g, '\n').replace(/\s+ /g, ' ');
     await this.limitRate('add_record', 60, 10, '{{user}}');
     const key = `${this.user._id}/${nanoid()}`;
-    await StorageModel.put(`submission/${key}`, Buffer.from(input), this.user._id);
+    await StorageModel.put(`submission/${key}`, Buffer.from(hackInput), this.user._id);
     const rid = await RecordModel.add(domainId, this.pdoc.docId, this.user._id, this.rdoc.lang, this.rdoc.code, true, {
       contest: tid,
       type: 'hack',
