@@ -1,31 +1,38 @@
 {% extends "layout/basic.html" %}
 {% block content %}
-<div class="row"><div class="medium-12 columns">
-  <div class="section">
-    <div class="section__header"><h1 class="section__title">{{ tdoc.title }} · 混合赛制配置</h1></div>
-    <div class="section__body typo">
-      <p>请在比赛开始前填写配置。每名参赛选手必须恰好属于一支队伍，并有一道个人题；每支队伍必须配置 <strong>5 个互不重复的团队题副本</strong>。所有题目请在 Hydro 中设为隐藏，避免通过普通题库入口泄题。</p>
-      <p>团队题副本必须使用相同题面与相同基础数据。插件会在某队成功 Hack 后，只向被 Hack 队伍对应的副本添加数据并重测该队提交，从而保证队伍之间互不污染。</p>
-      <form method="post" action="{{ url('hybrid_manage', tid=tdoc.docId) }}">
-        <label>JSON 配置</label>
-        <textarea name="config" rows="28" style="font-family: monospace; width: 100%;">{{ configJson }}</textarea>
-        <p><button class="button primary" type="submit" onclick="return confirm('保存后会把比赛固定为 3 小时并重写题目列表。比赛开始后不能再修改。确认保存？')">验证并保存</button>
-        <a class="button" href="{{ url('hybrid_dashboard', tid=tdoc.docId) }}">返回选手控制台</a></p>
-      </form>
-      <h2>配置示例</h2>
-      <pre>{
-  "personal": {
-    "101": 1001,
-    "102": 1002,
-    "201": 1003,
-    "202": 1004
-  },
-  "teams": [
-    { "id": "A", "name": "Team A", "members": [101, 102], "pids": [2001, 2002, 2003, 2004, 2005] },
-    { "id": "B", "name": "Team B", "members": [201, 202], "pids": [2011, 2012, 2013, 2014, 2015] }
-  ]
+<div class="row"><div class="medium-12 columns"><div class="section"><div class="section__header"><h1 class="section__title">{{ tdoc.title }} · 混合赛制管理</h1></div><div class="section__body typo">
+<p>管理员只配置个人题和统一团队题池；队伍由选手自行创建。每队最多 3 人，开赛前 5 分钟停止队伍变更。题目标识支持<strong>题目编号</strong>（如 <code>C1000</code>）或<strong>题目序号</strong>（数字，如 <code>1</code>），保存时统一解析。</p>
+<form method="post" action="{{ url('hybrid_manage', tid=tdoc.docId) }}"><label>JSON 配置</label><textarea name="config" rows="12" style="font-family:monospace;width:100%;">{{ configJson }}</textarea>
+<h2>团队题正解配置（用于 Hack 比对）</h2>
+<p>为每道团队题粘贴正解代码并选择语言。Hack 时系统会用正解与被 hack 代码分别跑 hack 输入，输出不同则 hack 成功。留空则对应题无法 Hack。</p>
+<textarea id="solutions-json" name="solutions" style="display:none;"></textarea>
+{% for i in range(teamProblemCount) %}<div style="border:1px solid #ddd;padding:8px;margin:8px 0;"><h3 style="margin:4px 0;">团队题 {{ i + 1 }}</h3><label style="display:inline-block;">语言
+<select class="sol-lang" data-slot="{{ i }}">{% for lang in langs %}<option value="{{ lang.id }}"{% if lang.id == solutionBySlot[i].lang %} selected{% endif %}>{{ lang.display }} ({{ lang.id }})</option>{% endfor %}</select></label>
+<textarea class="sol-code" data-slot="{{ i }}" rows="6" style="font-family:monospace;width:100%;">{{ solutionBySlot[i].code }}</textarea></div>{% endfor %}
+<p><button class="button primary" type="submit">验证并保存</button> <a class="button" href="{{ url('hybrid_dashboard', tid=tdoc.docId) }}">返回 /hybrid</a></p></form>
+<script>
+(function () {
+  function collect() {
+    var out = [];
+    document.querySelectorAll('.sol-code').forEach(function (code) {
+      var slot = Number(code.getAttribute('data-slot'));
+      var lang = document.querySelector('.sol-lang[data-slot="' + slot + '"]').value;
+      if (code.value.trim()) out.push({ slot: slot, lang: lang, code: code.value });
+    });
+    return JSON.stringify(out);
+  }
+  document.querySelector('form[method="post"]').addEventListener('submit', function () {
+    document.getElementById('solutions-json').value = collect();
+  });
+})();
+</script>
+<h2>队伍信息</h2>
+<table class="data-table"><thead><tr><th>队伍 ID</th><th>队名</th><th>成员</th><th>邀请码</th><th>操作</th></tr></thead><tbody>{% for team in teams %}<tr><td>{{ team.id }}</td><td>{{ team.name }}</td><td>{% for uid in team.members %}{{ uid }}{% if loop.last == false %}、{% endif %}{% endfor %}</td><td><code>{{ team.inviteCode }}</code></td><td>{% if teamMutationOpen %}<form method="post" action="{{ url('hybrid_manage_invite', tid=tdoc.docId) }}"><input type="hidden" name="teamId" value="{{ team.id }}"><input name="invite" value="{{ team.inviteCode }}" pattern="[0-9]{3}[A-Za-z]{6}" maxlength="9" required><button class="button" type="submit">修改邀请码</button></form>{% else %}已锁定{% endif %}</td></tr>{% endfor %}</tbody></table>
+<h2>队伍分数</h2><table class="data-table"><thead><tr><th>#</th><th>队伍</th><th>个人题</th><th>团队题</th><th>总分</th></tr></thead><tbody>{% for score in teamScores %}<tr><td>{{ loop.index }}</td><td>{{ score.name }}</td><td>{{ score.personalTotal }}</td><td>{{ score.teamTotal }}</td><td><strong>{{ score.total }}</strong></td></tr>{% endfor %}</tbody></table>
+<h2>最近 Hack 记录</h2><table class="data-table"><thead><tr><th>时间</th><th>攻击者 UID</th><th>攻击队伍</th><th>目标队伍</th><th>题槽</th><th>结果</th><th>额外扣分</th></tr></thead><tbody>{% for event in hackEvents %}<tr><td>{{ event.createdAt }}</td><td>{{ event.hackerUid }}</td><td>{{ event.attackerTeamId }}</td><td>{{ event.targetTeamId }}</td><td>{{ event.slot + 1 }}</td><td>{% if event.result == 'success' %}成功{% elif event.result == 'failure' %}失败{% elif event.result == 'error' %}<span style="color:#c00;">系统错误</span>{% else %}评测中…{% endif %}{% if event.result == 'error' %}<div style="font-size:12px;color:#c00;">正解评测未通过：{{ event.solStatusText or '未知' }}{% if event.solError %}<br><code style="font-size:11px;">{{ event.solError }}</code>{% endif %}</div>{% endif %}</td><td>{{ event.shortagePenalty or 0 }}</td></tr>{% endfor %}</tbody></table>
+<h2>配置示例</h2><pre>{
+  "personalPid": "C1000",
+  "teamPids": ["C1001", "C1002", "C1003", "C1004", "C1005"]
 }</pre>
-    </div>
-  </div>
-</div></div>
+</div></div></div></div>
 {% endblock %}
