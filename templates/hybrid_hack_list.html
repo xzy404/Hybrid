@@ -1,0 +1,48 @@
+{% extends "layout/basic.html" %}
+{% block content %}
+<div class="row"><div class="medium-12 columns">
+  <div class="section">
+    <div class="section__header"><h1 class="section__title">{{ tdoc.title }} · 团队题 {{ slot + 1 }} Hack</h1></div>
+    <div class="section__body typo">
+      <p>当前个人 Hack 机会已消耗 <strong>{{ used }}</strong> 次；本页显示的计算上限为 <strong>{{ quota }}</strong> 次。最终是否可 Hack 会在提交页再次以实时对手提交数和双方当前状态校验。</p>
+      <p>只可 Hack 对方本题最新的 AC 代码。提交错误 Hack 时，本题额外消耗 1 次机会；若不足 1 次则额外扣 5 分，并且本队本题扣 10 分。成功 Hack 后，对方本题扣 10 分、我方本题加 10 分。</p>
+    </div>
+  </div>
+  <div class="section"><div class="section__body">
+    <table class="data-table">
+      <thead><tr><th>对手队伍</th><th>当前本题得分</th><th>操作</th></tr></thead>
+      <tbody>
+        {% for candidate in candidates %}
+        <tr>
+          <td>{{ candidate.team.name }}</td><td>{{ candidate.score }}</td>
+          <td><a class="button primary" href="{{ url('problem_hack', pid=team.pids[slot], rid=candidate.rid, query={tid:tdoc.docId, hybridHack:1}) }}">Hack 该队最新 AC</a></td>
+        </tr>
+        {% else %}
+        <tr><td colspan="3">当前没有满足条件的对手目标。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p><a class="button" href="{{ url('hybrid_dashboard', tid=tdoc.docId) }}">返回控制台</a></p>
+  </div></div>
+  <div class="section"><div class="section__header"><h2 class="section__title">我的 Hack 记录</h2></div><div class="section__body">
+    <table class="data-table">
+      <thead><tr><th>时间</th><th>目标队伍</th><th>结果</th><th>额外扣分</th></tr></thead>
+      <tbody>
+        {% for event in myHacks %}
+        <tr>
+          <td>{{ event.createdAt }}</td>
+          <td>{{ event.targetTeamId }}</td>
+          <td>
+            {% if event.result == 'success' %}成功{% elif event.result == 'failure' %}失败{% elif event.result == 'error' %}<span style="color:#c00;">系统错误</span>{% else %}评测中…{% endif %}
+            {% if event.result == 'error' %}<div style="font-size:12px;color:#c00;">正解评测未通过：{{ event.solStatusText or '未知' }}{% if event.solError %}<br><code style="font-size:11px;">{{ event.solError }}</code>{% endif %}</div>{% endif %}
+          </td>
+          <td>{{ event.shortagePenalty or 0 }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4">暂无 Hack 记录。</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+</div></div>
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "layout/basic.html" %}
+{% import "components/user.html" as user with context %}
+{% block content %}
+<div class="row"><div class="medium-12 columns">
+  <div class="section">
+    <div class="section__header"><h1 class="section__title">{{ tdoc.title }} · {{ team.name }} 讨论区</h1></div>
+    <div class="section__body typo">
+      <p>仅本队且已锁定个人题的成员可以进入本页。请勿在此泄露其它队伍的代码或测试数据。</p>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section__header"><h1 class="section__title">消息（{{ messages.length }}）</h1></div>
+    <div class="section__body">
+      <ul class="dczcomments__list view--discussion">
+        {% for message in messages %}
+        {% set udoc = udict[message.uid] %}
+        <li class="dczcomments__item">
+          <div class="media">
+            <div class="media__left top">
+              <img src="{{ avatarUrl(udoc.avatar, 60) }}" width="60" height="60" class="medium user-profile-avatar">
+            </div>
+            <div class="media__body top">
+              <div class="clearfix">
+                <div class="supplementary dczcomments__supplementary">
+                  {{ user.render_inline(udoc, avatar=false) }}
+                  @ {{ datetimeSpan(message.createdAt)|safe }}
+                </div>
+              </div>
+              <div class="typo richmedia" data-emoji-enabled>
+                {{ message.content|markdown|safe }}
+              </div>
+            </div>
+          </div>
+        </li>
+        {% else %}
+        <li class="dczcomments__item"><div class="typo">暂无消息，来说点什么吧。</div></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section__body">
+      <div class="media">
+        <div class="media__left top">
+          <img src="{{ avatarUrl(handler.user.avatar, 60) }}" width="60" height="60" class="medium user-profile-avatar">
+        </div>
+        <div class="media__body top">
+          <form method="post" action="{{ url('hybrid_room', tid=tdoc.docId) }}">
+            <div><textarea name="content" class="textbox" data-markdown required rows="4"></textarea></div>
+            <p><button class="rounded primary button" type="submit">发送</button> <a class="button" href="{{ url('hybrid_dashboard', tid=tdoc.docId) }}">返回控制台</a></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div>
+{% endblock %}

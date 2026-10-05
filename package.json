@@ -1,0 +1,13 @@
+{
+  "name": "hybrid-lock-hack-contest",
+  "version": "1.0.0",
+  "description": "Hydro v5.0.4 hybrid individual-lock + team-hack contest rule",
+  "main": "index.ts",
+  "license": "AGPL-3.0-or-later",
+  "dependencies": {
+    "js-yaml": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
